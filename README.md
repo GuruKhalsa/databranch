@@ -3,8 +3,6 @@ Databranch implements database branching in development and test by cloning the 
 
 ## Installation
 
-Note:  Databranch currently only works with Rails and PostgreSQL.  It's developed for Rails 5 but will probably work with some older versions as well (untested).
-
 Add this line to your application's Gemfile:
 
 ```ruby
@@ -30,6 +28,8 @@ test:
   <<: *default
   database: <%= ENV['DATABRANCH_TEST'] %>
 ```
+
+Note:  Databranch currently only works with Rails and PostgreSQL.  It's developed for Rails 5 but will probably work with some older versions as well (untested).
 
 
 ## Usage
