@@ -1,0 +1,7 @@
+# Databranch
+#     ^
+#    ^^^
+#   ^^^^^
+./.git/hooks/databranch-post-commit
+
+#   (^_^)/

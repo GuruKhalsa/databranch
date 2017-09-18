@@ -1,0 +1,35 @@
+#!/bin/bash
+
+psql -t -A -c 'SELECT datname FROM pg_database' |
+grep ^${PWD##*/}_development_.*$ |
+grep -v master |
+awk "{gsub(/^${PWD##*/}_development_/, \"\")}1" |
+awk '{gsub(/_/, "-")}1' |
+xargs -I {} bash -c 'if [ ! "`git branch --list {}`" ] ; then echo "{}"; fi' |
+awk '{gsub(/-/, "_")}1' |
+awk "\$0=\"${PWD##*/}_development_\"\$0" |
+xargs -I {} bash -c '
+echo "Drop database {}? (Y/n)"
+read yn </dev/tty
+case $yn in
+    [Yy] ) dropdb {};;
+    [Nn] ) exit;;
+    * ) exit;;
+esac'
+
+psql -t -A -c 'SELECT datname FROM pg_database' |
+grep ^${PWD##*/}_test_.*$ |
+grep -v master |
+awk "{gsub(/^${PWD##*/}_test_/, \"\")}1" |
+awk '{gsub(/_/, "-")}1' |
+xargs -I {} bash -c 'if [ ! "`git branch --list {}`" ] ; then echo "{}"; fi' |
+awk '{gsub(/-/, "_")}1' |
+awk "\$0=\"${PWD##*/}_test_\"\$0" |
+xargs -I {} bash -c '
+echo "Drop database {}? (Y/n)"
+read yn </dev/tty
+case $yn in
+    [Yy] ) dropdb {};;
+    [Nn] ) exit;;
+    * ) exit;;
+esac'

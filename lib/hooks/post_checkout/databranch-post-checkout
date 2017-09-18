@@ -1,0 +1,93 @@
+#!/bin/bash
+
+previous_git_head=$1
+new_git_head=$2
+
+previous_branch=$(git rev-parse --symbolic-full-name --abbrev-ref @{-1})
+new_branch=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
+
+checkout_type=$3
+checkout_count=`git reflog --date=local | grep -o ${new_branch} | wc -l`
+
+previous_database="${PWD##*/}_development_${previous_branch//-/_}"
+fallback_database="${PWD##*/}_development_master"
+new_database="${PWD##*/}_development_${new_branch//-/_}"
+test_database="${PWD##*/}_test_${new_branch//-/_}"
+
+function ensure_not_file_checkout {
+  # this is a file checkout so don't do anything
+  if [ "$checkout_type" == "0" ]; then exit; fi
+}
+
+function ensure_not_rebase {
+  # this is a rebase so don't do anything
+  if [ $new_branch == 'HEAD' ]; then exit; fi
+}
+
+function database_exists {
+  if psql -lqt | cut -d \| -f 1 | grep -w $1; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function new_branch_created {
+  if [ "$previous_git_head" == "$new_git_head"  ] && [ ${checkout_count} -eq 1 ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function should_create_database {
+  database=$1
+  if database_exists $database; then
+    if new_branch_created; then
+      return 0
+    else
+      return 1
+    fi
+  else
+    return 0
+  fi
+}
+
+ensure_not_file_checkout
+ensure_not_rebase
+
+#possibly neccessary if order of operation below doesn't work as expected
+#create_db = should_create_database $new_database
+
+#move this into a function
+if should_create_database $new_database; then
+  echo "Creating Database $new_database"
+  createdb $new_database
+  createdb $test_database
+
+  # simplify conditional logic to just assign database to copy from and the message to DRY it up
+  if database_exists $previous_database; then
+    echo "Copying data and schema from $previous_database from the previous branch"
+    pg_dump $previous_database | psql $new_database
+    echo "Creating the test database $test_database for this branch"
+    pg_dump -s $previous_database | psql $test_database
+  else
+    echo "Couldn't find a database for the previous branch"
+    echo "Copying data and schema from $fallback_database from the master branch"
+    pg_dump $fallback_database | psql $new_database
+    echo "Creating the test database $test_database for this branch"
+    pg_dump -s $fallback_database | psql $test_database
+  fi
+else
+  echo "No need to create a database"
+fi
+
+echo '    prev branch: '$previous_branch
+echo '     new branch: '$new_branch
+
+if [ -f "tmp/pids/server.pid" ]
+then
+  rails restart
+else
+  touch tmp/restart.txt
+fi
