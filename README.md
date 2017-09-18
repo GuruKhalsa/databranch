@@ -1,4 +1,4 @@
-#Databranch
+# Databranch
 
 Databranch implements database branching in development and test by cloning the database automatically, supplementing Git branching workflow. This prevents situations where the database becomes stale due to schema or data inconsistencies between git branches. It automates the process of creating and deleting branch database copies by hooking into git.
 
